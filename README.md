@@ -88,9 +88,21 @@ The hardest bug was the **JSON Extraction Failure** during agent handovers.
 *   **The Fix**: I implemented a **Robust Regex Parser** in the `BaseAgent` that extracts content from markdown code blocks or curly braces regardless of surrounding text. I also added a **Veto/Retry** loop in the Orchestrator that detects malformed state and forces the agent to re-output in the correct schema.
 
 ## (g) 'What I would change with 2 more weeks'
-1.  **Redis State Store**: Move from in-memory Python dictionaries to a Redis-backed store to allow the swarm to scale horizontally across multiple servers.
-2.  **Playwright Integration**: Replace BeautifulSoup with a headless browser to scrape Javascript-heavy competitor sites that use aggressive anti-bot protections.
-3.  **Human-in-the-Loop Gateway**: Build a simple dashboard where a GrabOn manager can 'Approve' a strategist's negotiation brief before it is dispatched.
+
+1.  **Autonomous Tool Growth (Self-Healing Scrapers)**:
+    Currently, the Crawler uses static logic. I would implement a **Meta-Agent** that can detect when a competitor's website layout changes, autonomously write a new BeautifulSoup/Playwright script, test it in a sandbox, and deploy it to the swarm without human intervention.
+
+2.  **Predictive Market Game Theory**:
+    Instead of just reacting to current gaps, I would add a **Predictive Analyst** agent. This agent would model "If GrabOn raises its rate to 6%, how likely is Myntra or Ajio to respond within 24 hours?" based on historical timeline data stored in the Shared State.
+
+3.  **Multimodal Visual Verification**:
+    Competitors often hide their best deals inside banners or image-only overlays to block text-based scrapers. I would integrate **Gemini 1.5 Pro Vision** to "see" the homepage like a human user, ensuring 100% data coverage even against obfuscated HTML.
+
+4.  **Distributed State & Persistence**:
+    Move from the current in-memory `SharedState` to a **Redis-backed persistent store**. This would allow the Swarm to recover perfectly from server restarts and scale horizontally across multiple Docker nodes to monitor thousands of merchants simultaneously.
+
+5.  **Streaming Observability Dashboard**:
+    Develop a **Next.js + WebSocket dashboard** that streams the Orchestrator's internal reasoning (the "Thought Chain") in real-time. This would transform the system from a background script into a transparent enterprise command center.
 
 ---
 

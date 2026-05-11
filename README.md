@@ -90,19 +90,28 @@ The hardest bug was the **JSON Extraction Failure** during agent handovers.
 ## (g) 'What I would change with 2 more weeks'
 
 1.  **Autonomous Tool Growth (Self-Healing Scrapers)**:
-    Currently, the Crawler uses static logic. I would implement a **Meta-Agent** that can detect when a competitor's website layout changes, autonomously write a new BeautifulSoup/Playwright script, test it in a sandbox, and deploy it to the swarm without human intervention.
+    Implement a **Meta-Agent** that can detect when a competitor's website layout changes, autonomously write a new scraping script, test it in a sandbox, and deploy it to the swarm.
 
-2.  **Predictive Market Game Theory**:
-    Instead of just reacting to current gaps, I would add a **Predictive Analyst** agent. This agent would model "If GrabOn raises its rate to 6%, how likely is Myntra or Ajio to respond within 24 hours?" based on historical timeline data stored in the Shared State.
+2.  **Redis State Store (Horizontal Scaling)**:
+    Move from in-memory Python dictionaries to a **Redis-backed persistent store**. This allows the swarm to scale horizontally across multiple servers and recover perfectly from restarts.
 
-3.  **Multimodal Visual Verification**:
-    Competitors often hide their best deals inside banners or image-only overlays to block text-based scrapers. I would integrate **Gemini 1.5 Pro Vision** to "see" the homepage like a human user, ensuring 100% data coverage even against obfuscated HTML.
+3.  **Playwright Integration (Anti-Bot Resilience)**:
+    Replace BeautifulSoup with a headless **Playwright** browser to scrape Javascript-heavy competitor sites that use aggressive anti-bot protections and captchas.
 
-4.  **Distributed State & Persistence**:
-    Move from the current in-memory `SharedState` to a **Redis-backed persistent store**. This would allow the Swarm to recover perfectly from server restarts and scale horizontally across multiple Docker nodes to monitor thousands of merchants simultaneously.
+4.  **Predictive Market Game Theory**:
+    Add a **Predictive Analyst** agent to model "If GrabOn raises its rate, how likely is Myntra to respond?" based on historical timeline data stored in the Shared State.
 
-5.  **Streaming Observability Dashboard**:
-    Develop a **Next.js + WebSocket dashboard** that streams the Orchestrator's internal reasoning (the "Thought Chain") in real-time. This would transform the system from a background script into a transparent enterprise command center.
+5.  **Multimodal Visual Verification**:
+    Integrate **Gemini 1.5 Pro Vision** to "see" homepage banners and image-only overlays, ensuring 100% data coverage even against obfuscated HTML.
+
+6.  **Human-in-the-Loop Gateway**:
+    Build an **Approval Dashboard** where a GrabOn manager can 'Approve' or 'Veto' a strategist's negotiation brief before it is dispatched to the merchant.
+
+7.  **Semantic Caching Layer**:
+    Add a vector-cache layer to the Crawler. If a similar merchant was analyzed recently, the system would skip the LLM parsing phase entirely, saving 80% on token costs.
+
+8.  **Streaming Observability Dashboard**:
+    Develop a **Next.js + WebSocket dashboard** that streams the Orchestrator's internal reasoning (the "Thought Chain") in real-time for transparent enterprise monitoring.
 
 ---
 

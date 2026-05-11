@@ -23,33 +23,7 @@ I chose the **Competitive Intelligence Swarm** because it represents the "Hard" 
 | **Web Scraping**| BeautifulSoup4 | **LIVE** | Real fetch with **Rotating User-Agents** and **1-2s Delays**. Graceful fallback implemented for anti-bot blocks. |
 
 ## Architecture Diagram
-```mermaid
-graph TD
-    User((<b>START HERE</b>)) --> Brain[<b>1. THE ORCHESTRATOR</b><br/>Acts as the Manager]
-    
-    subgraph "The 4-Step Intelligence Team"
-        C[<b>2. THE CRAWLER</b><br/>Goes to the web and finds deals]
-        A[<b>3. THE ANALYST</b><br/>Compares deals to find gaps]
-        S[<b>4. THE STRATEGIST</b><br/>Creates a business plan]
-        Alt[<b>5. THE ALERTER</b><br/>Sends the final alert to you]
-    end
-    
-    Brain --> C
-    C --> A
-    A --> S
-    S --> Alt
-    
-    Alt --> Success((<b>GOAL REACHED</b>))
-
-    %% Simple, friendly colors
-    style User fill:#fff,stroke:#333
-    style Brain fill:#f9f,stroke:#333
-    style C fill:#bbf,stroke:#333
-    style A fill:#bfb,stroke:#333
-    style S fill:#fbb,stroke:#333
-    style Alt fill:#ffb,stroke:#333
-    style Success fill:#fff,stroke:#333
-```
+![Architecture Diagram](docs/images/architecture.png)
 
 ### 🎯 What is happening here?
 1.  **The Orchestrator**: This is the "Manager." It makes sure every agent stays on budget and finishes on time.

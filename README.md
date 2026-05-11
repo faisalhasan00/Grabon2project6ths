@@ -25,36 +25,33 @@ I chose the **Competitive Intelligence Swarm** because it represents the "Hard" 
 ## Architecture Diagram
 ```mermaid
 graph TD
-    User((User Input)) --> Orch[Orchestrator]
-    Orch --> State[(Shared State Store<br/>Versioned)]
+    User((User Input)) --> Orch[Orchestrator<br/>Control Plane]
     
-    subgraph Agents
-        C[Crawler Agent<br/>Gemini Flash + BS4]
-        A[Analyst Agent<br/>Groq/Llama3]
-        S[Strategist Agent<br/>Gemini Pro]
+    subgraph "Mastery Loop (Plan -> Act -> Observe -> Decide)"
+        Orch --> C[Crawler Agent<br/>Gemini Flash + BS4]
+        Orch --> A[Analyst Agent<br/>Groq/Llama3]
+        Orch --> S[Strategist Agent<br/>Anthropic/Claude]
+        Orch --> Alert[Alert Agent<br/>Ollama/Local]
     end
+
+    C <--> State[(Shared State Store<br/>Versioned)]
+    A <--> State
+    S <--> State
     
-    Orch --> C
-    C --> State
-    Orch --> A
-    A --> State
+    A -- "Evidence Payload" --> CR{Conflict Resolver}
+    S -- "Priority Payload" --> CR
     
-    A -- "Conflict Check" --> CR{Conflict Resolver}
-    S -- "Conflict Check" --> CR
-    
-    CR -- "Resolution" --> Orch
-    Orch --> S
-    S --> State
-    
-    Orch --> Alert[Alert Agent<br/>Ollama/Local]
+    CR -- "Resolved Decision" --> Orch
     
     subgraph Observability
         Log[JSON Timeline Logs]
         Budget[Budget Tracker]
+        Shadow[Shadow Testing]
     end
     
     Orch -.-> Log
     Orch -.-> Budget
+    A -.-> Shadow
 ```
 
 ## Per-Module Design Decisions & Tradeoffs

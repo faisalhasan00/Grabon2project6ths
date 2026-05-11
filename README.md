@@ -24,48 +24,55 @@ I chose the **Competitive Intelligence Swarm** because it represents the "Hard" 
 
 ## Architecture Diagram
 ```mermaid
-graph LR
-    Input([<b>1. User Query</b>]) --> Orch[<b>Orchestrator</b><br/>The Controller]
-    
-    subgraph "The Intelligence Pipeline"
-        Step1[<b>2. Crawler</b><br/>Scrapes Web]
-        Step2[<b>3. Analyst</b><br/>Finds Gaps]
-        Step3[<b>4. Strategist</b><br/>Writes Plan]
-        Step4[<b>5. Alerter</b><br/>Sends Alert]
-        
-        Step1 --> Step2 --> Step3 --> Step4
-    end
-    
-    Orch --- Step1
-    Orch --- Step2
-    Orch --- Step3
-    Orch --- Step4
-    
-    subgraph "Shared Memory"
-        State[(State Store)]
-    end
-    
-    Step1 -.-> State
-    Step2 -.-> State
-    Step3 -.-> State
-    Step4 -.-> State
+graph TD
+    %% Input Layer
+    User([<b>USER REQUEST</b>]) -- "1. Intent" --> Orch
 
-    style Step1 fill:#e1f5fe,stroke:#01579b
-    style Step2 fill:#fff3e0,stroke:#e65100
-    style Step3 fill:#f1f8e9,stroke:#33691e
-    style Step4 fill:#fce4ec,stroke:#880e4f
-    style Orch fill:#ede7f6,stroke:#311b92
+    %% Control Plane
+    subgraph Control_Plane [<b>CONTROL PLANE</b>]
+        Orch{<b>ORCHESTRATOR</b><br/>Logic & Budget}
+        Budget[[<b>BUDGET GATE</b><br/>USD Limit]]
+        Orch -.-> Budget
+    end
+
+    %% Execution Plane
+    subgraph Execution_Plane [<b>EXECUTION PLANE (The Agents)</b>]
+        direction LR
+        C[<b>CRAWLER</b><br/>Live Scraping] --> A[<b>ANALYST</b><br/>Gap Analysis]
+        A --> S[<b>STRATEGIST</b><br/>ROI Logic]
+        S --> Alt[<b>ALERTER</b><br/>Slack Dispatch]
+    end
+
+    %% Data Layer
+    subgraph Data_Layer [<b>DATA & PERSISTENCE</b>]
+        DB[(<b>SHARED STATE</b><br/>Optimistic Locking)]
+        Audit[<b>AUDIT LOG</b><br/>Versioned History]
+    end
+
+    %% Quality Layer
+    subgraph Quality_Layer [<b>OBSERVABILITY & QUALITY</b>]
+        Shadow[[<b>SHADOW TESTING</b><br/>Model Comparison]]
+        Timeline[[<b>TIMELINE</b><br/>JSON Trace]]
+    end
+
+    %% Connections
+    Orch ===> Execution_Plane
+    Execution_Plane <===> DB
+    DB -.-> Audit
+    A -.-> Shadow
+    Orch -.-> Timeline
+
+    %% Styling
+    style Orch fill:#f3e5f5,stroke:#7b1fa2,stroke-width:4px
+    style DB fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style Execution_Plane fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
 ```
 
-### 🕒 The Swarm Lifecycle in 30 Seconds:
-1.  **Input**: You ask to analyze a merchant.
-2.  **The Brain (Orchestrator)**: Manages the budget and tells agents when to work.
-3.  **The Pipeline**:
-    *   **Crawler** goes to the web to find real deals.
-    *   **Analyst** compares them to GrabOn's data to find gaps.
-    *   **Strategist** creates a business plan to beat the competition.
-    *   **Alerter** notifies the team if the threat is high.
-4.  **Shared Memory**: Every step is recorded in a "State Store" so no data is ever lost.
+### 🧠 Architectural Breakdown
+*   **Control Plane**: The "Brain" (Orchestrator) manages the budget and enforces 60s timeouts. It prevents runaway costs using a hardware-style **Budget Gate**.
+*   **Execution Plane**: A sequential intelligence pipeline where each agent specializes in one domain (Scraping, Analysis, or Strategy).
+*   **Data Layer**: A centralized "Source of Truth" using **Optimistic Locking** to ensure no two agents ever overwrite each other's data.
+*   **Quality Layer**: Uses **Shadow Testing** (running two models at once) to ensure the analysis is accurate before the Alerter fires.
 
 ## Per-Module Design Decisions & Tradeoffs
 1.  **Orchestrator (Control Plane)**:

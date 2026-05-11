@@ -24,35 +24,48 @@ I chose the **Competitive Intelligence Swarm** because it represents the "Hard" 
 
 ## Architecture Diagram
 ```mermaid
-graph TD
-    User((User Input)) --> Orch[Orchestrator<br/>Control Plane]
+graph LR
+    Input([<b>1. User Query</b>]) --> Orch[<b>Orchestrator</b><br/>The Controller]
     
-    subgraph "Mastery Loop (Plan -> Act -> Observe -> Decide)"
-        Orch --> C[Crawler Agent<br/>Gemini Flash + BS4]
-        Orch --> A[Analyst Agent<br/>Groq/Llama3]
-        Orch --> S[Strategist Agent<br/>Anthropic/Claude]
-        Orch --> Alert[Alert Agent<br/>Ollama/Local]
+    subgraph "The Intelligence Pipeline"
+        Step1[<b>2. Crawler</b><br/>Scrapes Web]
+        Step2[<b>3. Analyst</b><br/>Finds Gaps]
+        Step3[<b>4. Strategist</b><br/>Writes Plan]
+        Step4[<b>5. Alerter</b><br/>Sends Alert]
+        
+        Step1 --> Step2 --> Step3 --> Step4
     end
+    
+    Orch --- Step1
+    Orch --- Step2
+    Orch --- Step3
+    Orch --- Step4
+    
+    subgraph "Shared Memory"
+        State[(State Store)]
+    end
+    
+    Step1 -.-> State
+    Step2 -.-> State
+    Step3 -.-> State
+    Step4 -.-> State
 
-    C <--> State[(Shared State Store<br/>Versioned)]
-    A <--> State
-    S <--> State
-    
-    A -- "Evidence Payload" --> CR{Conflict Resolver}
-    S -- "Priority Payload" --> CR
-    
-    CR -- "Resolved Decision" --> Orch
-    
-    subgraph Observability
-        Log[JSON Timeline Logs]
-        Budget[Budget Tracker]
-        Shadow[Shadow Testing]
-    end
-    
-    Orch -.-> Log
-    Orch -.-> Budget
-    A -.-> Shadow
+    style Step1 fill:#e1f5fe,stroke:#01579b
+    style Step2 fill:#fff3e0,stroke:#e65100
+    style Step3 fill:#f1f8e9,stroke:#33691e
+    style Step4 fill:#fce4ec,stroke:#880e4f
+    style Orch fill:#ede7f6,stroke:#311b92
 ```
+
+### 🕒 The Swarm Lifecycle in 30 Seconds:
+1.  **Input**: You ask to analyze a merchant.
+2.  **The Brain (Orchestrator)**: Manages the budget and tells agents when to work.
+3.  **The Pipeline**:
+    *   **Crawler** goes to the web to find real deals.
+    *   **Analyst** compares them to GrabOn's data to find gaps.
+    *   **Strategist** creates a business plan to beat the competition.
+    *   **Alerter** notifies the team if the threat is high.
+4.  **Shared Memory**: Every step is recorded in a "State Store" so no data is ever lost.
 
 ## Per-Module Design Decisions & Tradeoffs
 1.  **Orchestrator (Control Plane)**:
@@ -87,12 +100,13 @@ The biggest challenge was handling **Pydantic Model Strictness** during budget t
    ```bash
    $env:PYTHONPATH = ".;$env:PYTHONPATH"; python tests/run_scenarios.py
    ```
-4. **View Logs**:
+4. **Start 24/7 Service**:
+   ```bash
+   python main.py
+   ```
+5. **View Logs**:
    Check `logs/swarm_timeline.json` for the full execution trace.
 
-## Eval Results
-| Scenario | Status | Latency | Cost |
-| :--- | :--- | :--- | :--- |
 ## Eval Results
 The system passed **15 scenarios** in the final validation run, demonstrating statistical rigor.
 

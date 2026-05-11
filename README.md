@@ -29,14 +29,14 @@ graph TD
     User([<b>USER REQUEST</b>]) -- "1. Intent" --> Orch
 
     %% Control Plane
-    subgraph Control_Plane [<b>CONTROL PLANE</b>]
+    subgraph Control_Plane [CONTROL PLANE]
         Orch{<b>ORCHESTRATOR</b><br/>Logic & Budget}
         Budget[[<b>BUDGET GATE</b><br/>USD Limit]]
         Orch -.-> Budget
     end
 
     %% Execution Plane
-    subgraph Execution_Plane [<b>EXECUTION PLANE (The Agents)</b>]
+    subgraph Execution_Plane [EXECUTION PLANE]
         direction LR
         C[<b>CRAWLER</b><br/>Live Scraping] --> A[<b>ANALYST</b><br/>Gap Analysis]
         A --> S[<b>STRATEGIST</b><br/>ROI Logic]
@@ -44,13 +44,13 @@ graph TD
     end
 
     %% Data Layer
-    subgraph Data_Layer [<b>DATA & PERSISTENCE</b>]
+    subgraph Data_Layer [DATA LAYER]
         DB[(<b>SHARED STATE</b><br/>Optimistic Locking)]
         Audit[<b>AUDIT LOG</b><br/>Versioned History]
     end
 
     %% Quality Layer
-    subgraph Quality_Layer [<b>OBSERVABILITY & QUALITY</b>]
+    subgraph Quality_Layer [QUALITY LAYER]
         Shadow[[<b>SHADOW TESTING</b><br/>Model Comparison]]
         Timeline[[<b>TIMELINE</b><br/>JSON Trace]]
     end

@@ -72,37 +72,28 @@ The biggest challenge was handling **Pydantic Model Strictness** during budget t
 5. **View Logs**:
    Check `logs/swarm_timeline.json` for the full execution trace.
 
-## Eval Results
-The system passed **15 scenarios** in the final validation run, demonstrating statistical rigor.
+## (e) Evaluation Results
+Based on the raw report in `reports/eval_report.json`:
 
-| Scenario Category | Count | Status | Avg Latency |
-| :--- | :--- | :--- | :--- |
-| **Statistical Rigor (Batch)** | 10 | PASSED | 3.5s |
-| **Conflict Resolution** | 1 | PASSED | 64.3s |
-| **Budget Enforcement** | 1 | PASSED | 3.7s |
-| **Optimistic Locking** | 1 | PASSED | <1s |
-| **Shadow Testing Validation** | 1 | PASSED | 10.3s |
-| **Timeout Recovery** | 1 | PASSED | 60.0s |
-
-## 💸 Cost Analysis & ROI
-The Swarm is engineered for maximum "Performance-per-Dollar." By leveraging a hybrid deterministic-AI approach, we minimize token waste.
-
-| Operation | Model | Estimated Cost (USD) |
+| Metric | Result | Note |
 | :--- | :--- | :--- |
-| **Crawl & Clean** | Gemini 1.5 Flash | $0.00004 |
-| **Gap Analysis** | Llama 3 70B (Groq) | $0.00006 |
-| **Strategy Brief** | Gemini 1.5 Flash | $0.00002 |
-| **Alerting** | Local Mistral | $0.00000 |
-| **Total per Merchant** | **Multi-LLM** | **~$0.00012** |
+| **Pass Rate** | 100% | System recovered from all failures and noisy data. |
+| **Avg Accuracy** | 94% | Gap detection correctly identified risks in test scenarios. |
+| **Avg Latency** | 10.1s | End-to-end orchestration across 4 agents. |
+| **Avg Cost** | $0.0004 | Highly optimized using Groq Llama 3.1/3.3 models. |
 
-### 📈 Efficiency Rationale
-*   **1 Full Loop (5 Merchants)**: ~$0.0006
-*   **24/7 Monitoring (Hourly)**: ~$0.036
-*   **Monthly Operating Cost**: ~$25.00 (Assuming 24/7 execution)
-*   **Savings**: Using this architecture vs. a "Naive GPT-4o only" approach saves approximately **92% on API overhead** while maintaining identical reasoning quality for competitive intelligence.
+## (f) 'What Broke First' (Hardest Bug)
+The most significant challenge was **Free-Tier Rate Limiting (429 Errors)** and **Model Decommissioning**. 
+*   **The Issue**: The 24/7 monitoring loop quickly exhausted the Gemini Flash free quota (20 req/day). Simultaneously, Groq decommissioned the specific Llama 3 models used during initial development, causing a `400 Invalid Request` error across the entire swarm.
+*   **The Fix**: I implemented a **Multi-Provider Fallback** system and upgraded the `BaseAgent` with **Exponential Backoff**. I also transitioned high-frequency tasks to the newer **Llama 3.3 70B** and **Llama 3.1 8B** models on Groq. This ensures the service remains stable even if one provider or model becomes unavailable.
 
-## What I Would Change with 2 More Weeks
-1.  **Distributed State**: Move from an in-memory `SharedState` to a distributed store like **Redis** to support horizontal scaling of agents across multiple Docker containers.
-2.  **Interactive Human-in-the-Loop**: Implement an `ApprovalAgent` that pauses the orchestrator for high-budget or high-risk strategies, requiring a human Slack command to proceed.
-3.  **Semantic Caching**: Add a vector-cache layer to the Crawler. If a similar merchant was analyzed in the last 10 minutes, skip the LLM parsing to save 80% on costs.
-4.  **Real Browser Integration**: Replace BeautifulSoup with **Playwright** to handle Javascript-heavy competitor sites that block standard requests.
+## (g) What I would change with 2 more weeks
+1.  **Distributed State Manager**: Replace the in-memory Python `SharedState` with **Redis** to allow horizontal scaling of agents across multiple servers.
+2.  **Multimodal Vision Agents**: Integrate **GPT-4o or Gemini Pro Vision** to capture screenshots of competitor coupon pages, ensuring accuracy even when HTML is obfuscated.
+3.  **Human-in-the-Loop Dashboard**: Create a Next.js dashboard where GrabOn category managers can "Approve" or "Veto" the Strategist's ROI recommendations before they are executed.
+
+## Cost Data
+*   **Total Development Cost**: ~$0.15 USD (Estimated across 500+ test runs).
+*   **One Full Agent Run**: **$0.0004** (Extremely cost-efficient for production).
+*   **One Full Eval Suite Run (3 Scenarios)**: **$0.0012**.
+*   **ROI Analysis**: Compared to a human analyst costing ~$25/hour, this system provides a **99.9% cost reduction** while operating 24/7.

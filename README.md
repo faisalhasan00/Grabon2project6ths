@@ -25,54 +25,38 @@ I chose the **Competitive Intelligence Swarm** because it represents the "Hard" 
 ## Architecture Diagram
 ```mermaid
 graph TD
-    %% Input Layer
-    User([<b>USER REQUEST</b>]) -- "1. Intent" --> Orch
-
-    %% Control Plane
-    subgraph Control_Plane [CONTROL PLANE]
-        Orch{<b>ORCHESTRATOR</b><br/>Logic & Budget}
-        Budget[[<b>BUDGET GATE</b><br/>USD Limit]]
-        Orch -.-> Budget
+    User((<b>START HERE</b>)) --> Brain[<b>1. THE ORCHESTRATOR</b><br/>Acts as the Manager]
+    
+    subgraph "The 4-Step Intelligence Team"
+        C[<b>2. THE CRAWLER</b><br/>Goes to the web and finds deals]
+        A[<b>3. THE ANALYST</b><br/>Compares deals to find gaps]
+        S[<b>4. THE STRATEGIST</b><br/>Creates a business plan]
+        Alt[<b>5. THE ALERTER</b><br/>Sends the final alert to you]
     end
+    
+    Brain --> C
+    C --> A
+    A --> S
+    S --> Alt
+    
+    Alt --> Success((<b>GOAL REACHED</b>))
 
-    %% Execution Plane
-    subgraph Execution_Plane [EXECUTION PLANE]
-        direction LR
-        C[<b>CRAWLER</b><br/>Live Scraping] --> A[<b>ANALYST</b><br/>Gap Analysis]
-        A --> S[<b>STRATEGIST</b><br/>ROI Logic]
-        S --> Alt[<b>ALERTER</b><br/>Slack Dispatch]
-    end
-
-    %% Data Layer
-    subgraph Data_Layer [DATA LAYER]
-        DB[(<b>SHARED STATE</b><br/>Optimistic Locking)]
-        Audit[<b>AUDIT LOG</b><br/>Versioned History]
-    end
-
-    %% Quality Layer
-    subgraph Quality_Layer [QUALITY LAYER]
-        Shadow[[<b>SHADOW TESTING</b><br/>Model Comparison]]
-        Timeline[[<b>TIMELINE</b><br/>JSON Trace]]
-    end
-
-    %% Connections
-    Orch ===> Execution_Plane
-    Execution_Plane <===> DB
-    DB -.-> Audit
-    A -.-> Shadow
-    Orch -.-> Timeline
-
-    %% Styling
-    style Orch fill:#f3e5f5,stroke:#7b1fa2,stroke-width:4px
-    style DB fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style Execution_Plane fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
+    %% Simple, friendly colors
+    style User fill:#fff,stroke:#333
+    style Brain fill:#f9f,stroke:#333
+    style C fill:#bbf,stroke:#333
+    style A fill:#bfb,stroke:#333
+    style S fill:#fbb,stroke:#333
+    style Alt fill:#ffb,stroke:#333
+    style Success fill:#fff,stroke:#333
 ```
 
-### 🧠 Architectural Breakdown
-*   **Control Plane**: The "Brain" (Orchestrator) manages the budget and enforces 60s timeouts. It prevents runaway costs using a hardware-style **Budget Gate**.
-*   **Execution Plane**: A sequential intelligence pipeline where each agent specializes in one domain (Scraping, Analysis, or Strategy).
-*   **Data Layer**: A centralized "Source of Truth" using **Optimistic Locking** to ensure no two agents ever overwrite each other's data.
-*   **Quality Layer**: Uses **Shadow Testing** (running two models at once) to ensure the analysis is accurate before the Alerter fires.
+### 🎯 What is happening here?
+1.  **The Orchestrator**: This is the "Manager." It makes sure every agent stays on budget and finishes on time.
+2.  **The Crawler**: Like a researcher, it visits competitor sites to see what deals they have right now.
+3.  **The Analyst**: Like a data scientist, it looks for "Gaps" where our competitors are beating us.
+4.  **The Strategist**: Like a CEO, it writes a strategy to win back those customers.
+5.  **The Alerter**: Like a messenger, it delivers the final report directly to your team.
 
 ## Per-Module Design Decisions & Tradeoffs
 1.  **Orchestrator (Control Plane)**:

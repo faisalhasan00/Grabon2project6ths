@@ -9,8 +9,10 @@ class BaseAgent(ABC):
     Abstract Base Class for all Swarm Agents.
     Ensures strict adherence to the messaging protocol.
     """
-    def __init__(self, role: AgentRole):
+    def __init__(self, role: AgentRole, model: str = None, provider: str = None):
         self.role = role
+        self.model_name = model
+        self.provider = provider
 
     @abstractmethod
     async def handle_request(self, message: AgentMessage) -> AgentMessage:
@@ -39,7 +41,7 @@ class BaseAgent(ABC):
             "gemini-flash-latest": {"in": 0.075, "out": 0.30},
             "gemini-1.5-flash": {"in": 0.07, "out": 0.21},
             "llama-3.3-70b-versatile": {"in": 0.59, "out": 0.79},
-            "llama3-70b-8192": {"in": 0.59, "out": 0.79},
+            "llama-3.1-8b-instant": {"in": 0.05, "out": 0.08},
             "gemini-1.5-pro": {"in": 3.50, "out": 10.50},
             "claude-3-haiku-20240307": {"in": 0.25, "out": 1.25},
             "claude-3-5-sonnet-20240620": {"in": 3.00, "out": 15.00},
@@ -65,26 +67,43 @@ class BaseAgent(ABC):
                 model = genai.GenerativeModel(model_name)
                 response = await asyncio.to_thread(model.generate_content, prompt)
                 
-                # Estimate tokens (approx 4 chars per token)
-                in_tokens = len(prompt) // 4
-                out_tokens = len(response.text) // 4
-                cost = self.calculate_cost(in_tokens, out_tokens, model_name)
-                return response.text, cost
+                
+                # Retry logic for rate limits
+                for attempt in range(3):
+                    try:
+                        response = await asyncio.to_thread(model.generate_content, prompt)
+                        in_tokens = len(prompt) // 4
+                        out_tokens = len(response.text) // 4
+                        cost = self.calculate_cost(in_tokens, out_tokens, model_name)
+                        return response.text, cost
+                    except Exception as e:
+                        if "429" in str(e) or "quota" in str(e).lower():
+                            await asyncio.sleep(2 ** (attempt + 1))
+                            continue
+                        raise e
 
             elif "llama" in model_name:
                 from groq import Groq
                 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-                response = await asyncio.to_thread(
-                    client.chat.completions.create,
-                    messages=[{"role": "user", "content": prompt}],
-                    model=model_name
-                )
-                cost = self.calculate_cost(
-                    response.usage.prompt_tokens, 
-                    response.usage.completion_tokens, 
-                    model_name
-                )
-                return response.choices[0].message.content, cost
+                
+                for attempt in range(3):
+                    try:
+                        response = await asyncio.to_thread(
+                            client.chat.completions.create,
+                            messages=[{"role": "user", "content": prompt}],
+                            model=model_name
+                        )
+                        cost = self.calculate_cost(
+                            response.usage.prompt_tokens, 
+                            response.usage.completion_tokens, 
+                            model_name
+                        )
+                        return response.choices[0].message.content, cost
+                    except Exception as e:
+                        if "429" in str(e) or "quota" in str(e).lower():
+                            await asyncio.sleep(2 ** (attempt + 1))
+                            continue
+                        raise e
 
             elif "claude" in model_name:
                 # If key is missing, return a mocked response as per rules
@@ -121,13 +140,21 @@ class BaseAgent(ABC):
 
     def _clean_json_response(self, text: str) -> dict:
         """
-        Cleans LLM response text by removing markdown backticks and parsing JSON.
+        Robustly extracts JSON from LLM responses even if surrounded by text or markdown.
         """
         try:
-            # Remove markdown code blocks if present
-            clean_text = re.sub(r'```(?:json)?\s*(.*?)\s*```', r'\1', text, flags=re.DOTALL)
-            clean_text = clean_text.strip()
-            return json.loads(clean_text)
-        except Exception as e:
-            print(f"[{self.role}] Failed to parse JSON: {e}. Raw text: {text[:100]}...")
+            # 1. Try to find JSON inside markdown code blocks
+            json_match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group(1))
+            
+            # 2. Try to find anything between curly braces
+            curly_match = re.search(r'(\{.*\})', text, re.DOTALL)
+            if curly_match:
+                return json.loads(curly_match.group(1))
+            
+            # 3. Last resort: Direct parse
+            return json.loads(text)
+        except Exception:
+            print(f"   [AgentRole.{self.role}] Failed to parse JSON. Raw text: {text[:100]}...")
             return {}

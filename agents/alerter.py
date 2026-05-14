@@ -14,13 +14,13 @@ class AlertAgent(BaseAgent):
     Simulates using a local Ollama model (Mistral) or a lightweight backup.
     Satisfies Requirement: '4th provider (Local/Ollama)'.
     """
-    def __init__(self):
-        super().__init__(role=AgentRole.ALERTER)
+    def __init__(self, model: str = "mistral"):
+        super().__init__(role=AgentRole.ALERTER, model=model, provider="ollama")
         self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     async def handle_request(self, message: AgentMessage) -> AgentMessage:
         strategy_data = message.payload.data.get("input", {})
-        print(f"[Alert] Preparing notification for strategy...")
+        print(f"\n   [Alerter] Preparing notification for strategy...")
         
         # 1. PLAN: Notification Formatting
         prompt = f"Create a short Slack notification for this strategy: {json.dumps(strategy_data)}. Use emojis."
@@ -62,3 +62,34 @@ class AlertAgent(BaseAgent):
             "alert_content": f"ACTION REQUIRED: {data.get('recommendation')}. Priority: {data.get('priority')}",
             "channel": "SLACK/MOCK"
         }
+
+if __name__ == "__main__":
+    import asyncio
+    from messaging.schemas import Payload, MessageType
+
+    async def test_run():
+        print("\n--- [INDEPENDENT ALERTER DEMO] ---")
+        agent = AlertAgent()
+        
+        # Simulated Strategist Data
+        test_payload = Payload(data={
+            "input": {
+                "recommendation": "Increase GrabOn rate by 2% to beat Myntra.",
+                "priority": "HIGH",
+                "negotiation_brief": "Competitive threat detected at 12% rate."
+            }
+        })
+        
+        test_msg = AgentMessage(
+            message_id="alert_test_001",
+            sender=AgentRole.ORCHESTRATOR,
+            receiver=AgentRole.ALERTER,
+            message_type=MessageType.REQUEST,
+            payload=test_payload
+        )
+        
+        response = await agent.handle_request(test_msg)
+        print(f"\n[DEMO RESULT]\nAlert Content: {response.payload.data.get('alert_content')}")
+        print(f"Channel: {response.payload.data.get('channel')}")
+
+    asyncio.run(test_run())

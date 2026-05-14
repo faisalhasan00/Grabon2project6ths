@@ -13,11 +13,12 @@ load_dotenv()
 
 class CrawlerAgent(BaseAgent):
     """
-    Crawler Agent: Scrapes competitor data and cleans it using Gemini Flash.
+    Crawler Agent: Scrapes competitor data and cleans it using Groq.
     Satisfies Requirement: 'At least one step that does NOT use an LLM.'
     """
-    def __init__(self):
-        super().__init__(role=AgentRole.CRAWLER)
+    def __init__(self, model: str = "llama-3.1-8b-instant"):
+        # Switched to Groq (Llama 3.1 8b) for extremely fast and cheap data cleaning
+        super().__init__(role=AgentRole.CRAWLER, model=model, provider="groq")
         api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
@@ -27,7 +28,7 @@ class CrawlerAgent(BaseAgent):
 
     async def handle_request(self, message: AgentMessage) -> AgentMessage:
         query = message.payload.data.get("input", "")
-        print(f"[Crawler] Scraping data for: {query}")
+        print(f"\n   [Crawler] Scraping data for: {query}")
         
         # 1. PLAN: Deterministic Scraper (Non-LLM)
         raw_data = self._deterministic_scrape(query)
@@ -41,14 +42,14 @@ class CrawlerAgent(BaseAgent):
     async def _act_with_retry(self, raw_data: str):
         """ACT phase with Re-planning logic."""
         prompt = f"Clean this data into structured JSON: {raw_data}"
-        content, cost = await self._call_llm(prompt, "gemini-flash-latest")
+        content, cost = await self._call_llm(prompt, self.model_name)
         data = self._clean_json_response(content)
         
         if not data or "merchant" not in data:
             # RE-PLAN: Try a different approach/prompt
             print("[Crawler] RE-PLANNING: Data missing merchant. Retrying with explicit schema instruction...")
             prompt += "\nREQUIRED: JSON must contain 'merchant' and 'cashback_rate'."
-            content2, cost2 = await self._call_llm(prompt, "gemini-flash-latest")
+            content2, cost2 = await self._call_llm(prompt, self.model_name)
             data = self._clean_json_response(content2)
             cost += cost2
             
@@ -103,3 +104,29 @@ class CrawlerAgent(BaseAgent):
         return json.dumps({"merchant": merchant, "offers": offers, "source": "Internal Fallback (Mock)"})
 
     # Removed manual _clean_with_llm in favor of base agent _call_llm
+
+if __name__ == "__main__":
+    import asyncio
+    from messaging.schemas import Payload, MessageType
+
+    async def test_run():
+        print("\n--- [INDEPENDENT CRAWLER DEMO] ---")
+        agent = CrawlerAgent()
+        
+        # Test a live crawl
+        test_payload = Payload(data={"input": "Analyze Myntra coupons"})
+        
+        test_msg = AgentMessage(
+            message_id="crawl_test_001",
+            sender=AgentRole.ORCHESTRATOR,
+            receiver=AgentRole.CRAWLER,
+            message_type=MessageType.REQUEST,
+            payload=test_payload
+        )
+        
+        response = await agent.handle_request(test_msg)
+        print(f"\n[DEMO RESULT]\nMerchant: {response.payload.data.get('merchant')}")
+        print(f"Status: {response.payload.data.get('status')}")
+        print(f"Extracted Source: {response.payload.data.get('source')}")
+
+    asyncio.run(test_run())

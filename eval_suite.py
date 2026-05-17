@@ -36,7 +36,8 @@ class EvalSuite:
             cost = self.orchestrator.total_cost
             
             # Validation Logic
-            actual_risk = final_state.get("analysis_results", {}).get("risk_level", "UNKNOWN")
+            analysis = final_state.get("analyst_output") or final_state.get("analysis_results") or {}
+            actual_risk = analysis.get("risk_level", "UNKNOWN")
             passed = (actual_risk == expected_risk) if expected_risk != "ANY" else True
             
             report = {

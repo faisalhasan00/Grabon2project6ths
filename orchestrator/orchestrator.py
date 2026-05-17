@@ -29,46 +29,67 @@ class SwarmOrchestrator:
         self.agents[role] = agent_instance
 
     async def run_pipeline(self, initial_query: str):
+        # ANSI Color Codes
+        CYAN = "\033[96m"
+        YELLOW = "\033[93m"
+        GREEN = "\033[92m"
+        MAGENTA = "\033[95m"
+        BLUE = "\033[94m"
+        BOLD = "\033[1m"
+        RESET = "\033[0m"
+
         try:
-            print(f"\n--- [PIPELINE START] Target: {initial_query} ---")
+            print(f"\n{BLUE}{BOLD}=================================================={RESET}")
+            print(f"{BLUE}{BOLD}[PIPELINE START] Target: {initial_query}{RESET}")
+            print(f"{BLUE}{BOLD}=================================================={RESET}\n")
             
             # 1. Crawler Stage
-            print(f"> [PHASE: CRAWL] Searching for merchant deals...")
+            print(f"{CYAN}{BOLD}[PHASE: CRAWLER]{RESET} Searching for live merchant deals...")
             crawler_data = await self._execute_agent(AgentRole.CRAWLER, initial_query)
+            print("") # Vertical spacing
+
+            events = crawler_data.get("events") or []
+            if events:
+                self._log_event("MARKET_EVENTS", f"{len(events)} intelligence events", {"events": events})
             
-            # 1.5 Validation Check (Mastery: Typed Veto)
+            # 1.5 Validation Check
             if not crawler_data or "merchant" not in crawler_data:
-                print(f"!!! [VETO] Analyst rejected noisy output. Retrying...")
+                print(f"{YELLOW}[VETO] Analyst rejected noisy output. Retrying...{RESET}")
                 self._log_event("DATA_VETO", "Analyst rejected noisy crawler output.", level="WARNING")
                 crawler_data = await self._execute_agent(AgentRole.CRAWLER, f"REVISE: Last extraction was noisy. Focus on {initial_query}")
+                print("")
             
             # 2. Analyst Stage
-            print(f"> [PHASE: ANALYZE] Computing market gaps and defection risk...")
+            print(f"{YELLOW}{BOLD}[PHASE: ANALYST]{RESET} Computing market gaps and defection risk...")
             analysis_data = await self._execute_agent(AgentRole.ANALYST, crawler_data)
+            print("")
             
             # 3. Strategist Stage
-            print(f"> [PHASE: STRATEGIZE] Synthesizing negotiation briefs...")
+            print(f"{GREEN}{BOLD}[PHASE: STRATEGIST]{RESET} Synthesizing negotiation briefs...")
             strategy_data = await self._execute_agent(AgentRole.STRATEGIST, analysis_data)
+            print("")
             
-            # 4. Conflict Resolution (Crucial Requirement)
-            print(f"> [PHASE: RESOLVE] Checking for strategy conflicts...")
+            # 4. Conflict Resolution
+            print(f"{BLUE}{BOLD}[PHASE: RESOLVE]{RESET} Checking for strategy conflicts...")
             resolved_strategy = await self._handle_conflicts(analysis_data, strategy_data)
+            print("")
+            self._apply_crawl_feedback(crawler_data, analysis_data, resolved_strategy)
             
             # 5. Agreement Check & Alert Stage
             if analysis_data.get("risk_level") == resolved_strategy.get("priority"):
-                print(f"> [PHASE: ALERT] Dispatching notification to Slack...")
+                print(f"{MAGENTA}{BOLD}[PHASE: ALERTER]{RESET} Dispatching notification to Slack...")
                 await self._execute_agent(AgentRole.ALERTER, resolved_strategy)
             else:
-                print(f"! [ALERT SKIPPED] Severity Mismatch: Risk ({analysis_data.get('risk_level')}) vs Priority ({resolved_strategy.get('priority')})")
+                print(f"{MAGENTA}! [ALERT SKIPPED] Severity Mismatch: Risk ({analysis_data.get('risk_level')}) vs Priority ({resolved_strategy.get('priority')}){RESET}")
                 self._log_event("ALERT_SKIPPED", "Analyst and Strategist disagreed on severity. Alert withheld.", 
                                {"risk": analysis_data.get("risk_level"), "priority": resolved_strategy.get("priority")})
             
-            print(f"--- [PIPELINE COMPLETE] Cost: ${self.total_cost:.4f} | Ver: {self.state.get_version()} ---\n")
+            print(f"\n{BLUE}{BOLD}[PIPELINE COMPLETE] Cost: ${self.total_cost:.4f} | Ver: {self.state.get_version()}{RESET}\n")
             self._log_event("PIPELINE_COMPLETE", f"Pipeline finished. Total Cost: ${self.total_cost:.4f}")
             
         except Exception as e:
             self._log_event("PIPELINE_ERROR", str(e), level="ERROR")
-            print(f"❌ [FATAL ERROR] {e}")
+            print(f"[FATAL ERROR] {e}")
             raise e
 
     async def _execute_agent(self, role: AgentRole, input_data: Any):
@@ -141,7 +162,7 @@ class SwarmOrchestrator:
             resolution_data = {
                 "conflict": "Risk vs Priority Mismatch",
                 "resolution": "Analyst risk assessment overruled Strategist priority.",
-                "reasoning": f"Evidence: Competitor has {analysis.get('competitor_rate')} vs GrabOn {analysis.get('grabon_rate')}. Risk Tier: {risk_level}.",
+                "reasoning": f"Evidence: Competitor has {analysis.get('competitor_rate')} vs client {analysis.get('client_rate')}. Risk Tier: {risk_level}.",
                 "version": self.state.get_version()
             }
             self.state.update_state(
@@ -154,6 +175,34 @@ class SwarmOrchestrator:
             self._log_event("CONFLICT_RESOLVED", "Risk-First Priority Applied", resolution_data)
             
         return strategy
+
+    def _apply_crawl_feedback(
+        self,
+        crawler_data: Dict[str, Any],
+        analysis_data: Dict[str, Any],
+        strategy_data: Optional[Dict[str, Any]],
+    ) -> None:
+        """Feed analyst/strategist severity back into autonomous crawl scheduling."""
+        crawler = self.agents.get(AgentRole.CRAWLER)
+        if not crawler or not hasattr(crawler, "apply_pipeline_feedback"):
+            return
+        slug = crawler_data.get("merchant_slug") or crawler_data.get("query")
+        if not slug and crawler_data.get("merchant"):
+            from agents.crawler.crawl.profiles import normalize_query
+            slug = normalize_query(str(crawler_data["merchant"]))
+        if not slug:
+            return
+        priority = strategy_data.get("priority") if strategy_data else None
+        decision = crawler.apply_pipeline_feedback(
+            str(slug),
+            analyst_risk=analysis_data.get("risk_level"),
+            strategist_priority=priority,
+        )
+        if decision:
+            print(
+                f"   [Scheduler] Autonomous boost → {slug}: "
+                f"{decision.mode} every {decision.interval_sec}s ({decision.reason})"
+            )
 
     def _log_event(self, event_type: str, message: str, data: Optional[Dict] = None, level: str = "INFO"):
         log_entry = {

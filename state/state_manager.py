@@ -2,6 +2,8 @@ import threading
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 from messaging.schemas import AgentRole, MessageType
+from pydantic import ValidationError
+from state.contracts import CrawlerPayloadContract
 
 class SharedState:
     """
@@ -26,6 +28,19 @@ class SharedState:
             if expected_version is not None and expected_version != self._version:
                 raise ValueError(f"Optimistic Locking Failure: Agent {agent.value} attempted update with version {expected_version}, but current version is {self._version}")
             
+            # --- DATA GOVERNANCE ENFORCEMENT ---
+            # If the crawler is updating raw competitor data, enforce the Pydantic Contract
+            if key == "competitor_data" and isinstance(value, dict):
+                try:
+                    # We validate each target's payload against the strict ontology
+                    for target, payload in value.items():
+                        if isinstance(payload, dict) and "url_visited" in payload:
+                            CrawlerPayloadContract(**payload)
+                except ValidationError as e:
+                    print(f"   [Data Governance] CRITICAL WARNING: {agent.value} attempted to inject malformed data! Blocking state mutation.")
+                    print(f"   Contract Violation Details: {e.errors()}")
+                    # In a production system, this would route to a Dead Letter Queue or trigger an Analyst review
+                    
             self._version += 1
             self._data[key] = value
             

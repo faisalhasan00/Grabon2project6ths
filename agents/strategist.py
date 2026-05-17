@@ -61,7 +61,7 @@ if __name__ == "__main__":
                 "risk_level": "HIGH",
                 "gap_found": True,
                 "competitor_rate": "12%",
-                "grabon_rate": "5%",
+                "client_rate": "5%",
                 "reasoning": "Competitor is significantly beating us on Myntra coupons."
             }
         })
